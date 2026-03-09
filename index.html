@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Politie Academie - Tekstbeheersing</title>
+    <title>Politie Academie - Monitor Paneel</title>
     <style>
         :root {
             --police-blue: #1c2b4a;
@@ -32,8 +32,8 @@
         }
 
         .container {
-            width: 90%;
-            max-width: 800px;
+            width: 95%;
+            max-width: 1000px;
             margin-top: 2rem;
             background: white;
             padding: 2rem;
@@ -44,7 +44,7 @@
 
         .hidden { display: none; }
 
-        input, select, button, textarea {
+        button, select, input, textarea {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
@@ -54,14 +54,7 @@
             box-sizing: border-box;
         }
 
-        button {
-            background: var(--police-blue);
-            color: white;
-            cursor: pointer;
-            border: none;
-            font-weight: bold;
-        }
-
+        button { background: var(--police-blue); color: white; cursor: pointer; border: none; font-weight: bold; }
         .btn-gold { background: var(--police-gold); }
         .btn-reset { background: var(--alert-red); margin-top: 20px; }
 
@@ -70,26 +63,38 @@
             padding: 1.5rem;
             border-left: 5px solid var(--police-gold);
             margin-bottom: 1.5rem;
-            font-style: italic;
             font-weight: bold;
         }
 
-        .feedback-item {
-            border-bottom: 1px solid #ddd;
-            padding: 15px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* Monitor Styling */
+        .class-section {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
         }
-
-        .vote-btns { display: flex; align-items: center; gap: 8px; }
-        .vote-btns button { width: auto; padding: 5px 10px; background: #e0e0e0; color: #333; }
+        .class-header {
+            background: #eee;
+            padding: 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            text-transform: uppercase;
+        }
+        .answer-row {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: grid;
+            grid-template-columns: 150px 1fr 80px;
+            font-size: 0.9rem;
+        }
+        .answer-row:last-child { border-bottom: none; }
+        .vote-count { text-align: right; font-weight: bold; color: var(--police-gold); }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Opleiding GGP - Correct Rapporteren</h1>
+    <h1>Opleiding GGP - Taaldrempel Monitor</h1>
 </header>
 
 <div class="container">
@@ -108,28 +113,35 @@
         </select>
         <button id="btn-login">Start Training</button>
         <hr>
-        <button id="btn-teacher-mode" style="background:none; color: gray; font-size: 0.8rem;">Docent Log-in</button>
+        <button id="btn-teacher-mode" style="background:none; color: gray; font-size: 0.8rem;">Open Docenten Monitor</button>
     </div>
 
     <div id="lesson-screen" class="hidden">
         <div id="progress">Scherm <span id="current-num">1</span></div>
         <div class="sentence-box" id="wrong-sentence">Laden...</div>
-        
         <textarea id="correction-input" placeholder="Verbeter de bovenstaande zin..." rows="3"></textarea>
         <button id="btn-submit">Verzend Correctie</button>
-
-        <h4>Correcties van collega's (<span id="my-class-label"></span>)</h4>
+        <h4>Feedback van collega's</h4>
         <div id="peer-feedback-list"></div>
     </div>
 
     <div id="teacher-controls" class="hidden">
-        <h3>Docentenpaneel (Bediening)</h3>
-        <p>Huidige zin: <strong id="admin-step-label">1</strong></p>
-        <button id="btn-prev">Vorige Scherm</button>
-        <button id="btn-next" class="btn-gold">Volgende Scherm</button>
+        <h3>Docentenpaneel & Live Monitor</h3>
+        <div class="sentence-box">
+            Huidige zin (<span id="admin-step-label">1</span>): <br>
+            <span id="admin-sentence-text" style="font-style: italic;"></span>
+        </div>
         
-        <button id="btn-reset" class="btn-reset">RESET SESSIE (Wis alles)</button>
-        <p style="font-size: 0.7rem; color: gray;">* Reset zet de teller op 1 en verwijdert alle ingezonden teksten.</p>
+        <div style="display: flex; gap: 10px;">
+            <button id="btn-prev">Vorige Scherm</button>
+            <button id="btn-next" class="btn-gold">Volgende Scherm</button>
+        </div>
+
+        <h4>Live Resultaten:</h4>
+        <div id="class-monitor">
+            </div>
+
+        <button id="btn-reset" class="btn-reset">RESET SESSIE & WISSEN</button>
     </div>
 </div>
 
@@ -151,100 +163,114 @@
     const db = getDatabase(app);
 
     const zinnen = [
-        "De verdachte reed hard.",
-        "Het slachtoffer had veel pijn.",
-        "De verdachte droeg donkere kleding.",
-        "Het was een grote groep mensen.",
-        "De verdachte was erg boos.",
-        "De man met de hond die blafte.",
-        "De gevonden sleutels van de auto.",
-        "De fiets van de man die gestolen was.",
-        "De politieagent zag de dief met het mes.",
-        "Hij zag de man met de verrekijker."
+        "De verdachte reed hard.", "Het slachtoffer had veel pijn.", "De verdachte droeg donkere kleding.",
+        "Het was een grote groep mensen.", "De verdachte was erg boos.", "De man met de hond die blafte.",
+        "De gevonden sleutels van de auto.", "De fiets van de man die gestolen was.",
+        "De politieagent zag de dief met het mes.", "Hij zag de man met de verrekijker."
     ];
 
     let currentUser = "";
     let currentClass = "";
+    const klassen = ["delta", "echo", "foxtrot", "golf", "hotel", "juliett", "lima", "mike"];
 
-    // --- NAVIGATIE & INLOG ---
+    // --- NAVIGATIE ---
     document.getElementById('btn-login').onclick = () => {
         currentUser = document.getElementById('username').value.trim();
         currentClass = document.getElementById('class-select').value;
-        if(!currentUser) return alert("Naam invullen a.u.b.");
+        if(!currentUser) return alert("Naam invullen.");
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('lesson-screen').classList.remove('hidden');
-        document.getElementById('my-class-label').innerText = currentClass;
-        initSync();
+        initSync(false);
     };
 
     document.getElementById('btn-teacher-mode').onclick = () => {
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('teacher-controls').classList.remove('hidden');
-        initSync();
+        initSync(true);
     };
 
-    // --- DOCENT ACTIES ---
+    // --- DOCENT LOGICA ---
     document.getElementById('btn-next').onclick = () => changeStep(1);
     document.getElementById('btn-prev').onclick = () => changeStep(-1);
-    
     document.getElementById('btn-reset').onclick = async () => {
-        if(confirm("Weet je zeker dat je de sessie wilt resetten? Alle antwoorden worden gewist.")) {
+        if(confirm("Sessie resetten? Alle data wordt gewist.")) {
             await set(ref(db, 'session/currentStep'), 0);
             await remove(ref(db, 'corrections'));
-            alert("Sessie gereset.");
         }
     };
 
     function changeStep(delta) {
-        runTransaction(ref(db, 'session/currentStep'), (current) => {
-            let next = (current || 0) + delta;
-            if(next < 0) next = 0;
-            if(next >= zinnen.length) next = zinnen.length - 1;
-            return next;
+        runTransaction(ref(db, 'session/currentStep'), (c) => {
+            let next = (c || 0) + delta;
+            return Math.max(0, Math.min(next, zinnen.length - 1));
         });
     }
 
-    // --- SYNC & FEEDBACK ---
-    function initSync() {
+    // --- SYNC & MONITOR ---
+    function initSync(isMonitor) {
         onValue(ref(db, 'session/currentStep'), (snapshot) => {
             const step = snapshot.val() || 0;
             document.getElementById('current-num').innerText = step + 1;
-            document.getElementById('admin-step-label').innerText = step + 1;
             document.getElementById('wrong-sentence').innerText = zinnen[step];
-            document.getElementById('correction-input').value = "";
-            loadFeedback(step);
+            
+            if(isMonitor) {
+                document.getElementById('admin-step-label').innerText = step + 1;
+                document.getElementById('admin-sentence-text').innerText = zinnen[step];
+                monitorAllClasses(step);
+            } else {
+                loadStudentFeedback(step);
+            }
         });
     }
 
+    function monitorAllClasses(step) {
+        onValue(ref(db, `corrections/${step}`), (snapshot) => {
+            const monitorDiv = document.getElementById('class-monitor');
+            monitorDiv.innerHTML = "";
+            const allData = snapshot.val() || {};
+
+            klassen.forEach(klas => {
+                let html = `<div class="class-section"><div class="class-header">Klas: ${klas}</div>`;
+                if(allData[klas]) {
+                    for(let user in allData[klas]) {
+                        const entry = allData[klas][user];
+                        html += `<div class="answer-row">
+                            <strong>${user}</strong>
+                            <span>${entry.text}</span>
+                            <span class="vote-count">👍 ${entry.votes || 0}</span>
+                        </div>`;
+                    }
+                } else {
+                    html += `<div style="padding:10px; color:#999 italic;">Nog geen inzendingen...</div>`;
+                }
+                html += `</div>`;
+                monitorDiv.innerHTML += html;
+            });
+        });
+    }
+
+    // --- STUDENT FEEDBACK ---
     document.getElementById('btn-submit').onclick = () => {
         const text = document.getElementById('correction-input').value.trim();
         if(!text) return;
-        onValue(ref(db, 'session/currentStep'), (snap) => {
-            const step = snap.val() || 0;
-            set(ref(db, `corrections/${step}/${currentClass}/${currentUser}`), {
-                text: text,
-                votes: 0
-            });
+        onValue(ref(db, 'session/currentStep'), (s) => {
+            set(ref(db, `corrections/${s.val() || 0}/${currentClass}/${currentUser}`), { text, votes: 0 });
+            alert("Verzonden!");
         }, { onlyOnce: true });
     };
 
-    function loadFeedback(step) {
+    function loadStudentFeedback(step) {
         onValue(ref(db, `corrections/${step}/${currentClass}`), (snap) => {
             const list = document.getElementById('peer-feedback-list');
             list.innerHTML = "";
-            const data = snap.val();
+            const data = snap.val() || {};
             for(let user in data) {
                 if(user === currentUser) continue;
                 const div = document.createElement('div');
-                div.className = 'feedback-item';
-                div.innerHTML = `
-                    <span><strong>${user}:</strong> ${data[user].text}</span>
-                    <div class="vote-btns">
-                        <span>${data[user].votes || 0}</span>
-                        <button onclick="window.vote('${step}','${user}',1)">👍</button>
-                        <button onclick="window.vote('${step}','${user}',-1)">👎</button>
-                    </div>
-                `;
+                div.style = "border-bottom:1px solid #ddd; padding:10px; display:flex; justify-content:space-between;";
+                div.innerHTML = `<span><b>${user}:</b> ${data[user].text}</span>
+                    <span>${data[user].votes || 0} 
+                    <button style="width:auto; padding:2px 5px;" onclick="window.vote('${step}','${user}',1)">👍</button></span>`;
                 list.appendChild(div);
             }
         });

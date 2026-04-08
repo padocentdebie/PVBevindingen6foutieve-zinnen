@@ -66,29 +66,55 @@
             font-weight: bold;
         }
 
-        /* Monitor Styling */
-        .class-section {
-            margin-top: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-        .class-header {
-            background: #eee;
-            padding: 10px;
-            font-weight: bold;
-            border-bottom: 1px solid #ddd;
-            text-transform: uppercase;
-        }
-        .answer-row {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
+        /* --- SPEELSE FEEDBACK MUUR --- */
+        #peer-feedback-list {
             display: grid;
-            grid-template-columns: 150px 1fr 80px;
-            font-size: 0.9rem;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+            align-items: start;
         }
-        .answer-row:last-child { border-bottom: none; }
-        .vote-count { text-align: right; font-weight: bold; color: var(--police-gold); }
+
+        .feedback-card {
+            background: #fffef0;
+            padding: 15px;
+            border-radius: 2px;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.1);
+            transform: rotate(-1deg);
+            transition: transform 0.2s, opacity 0.3s;
+            border-top: 2px solid rgba(0,0,0,0.05);
+        }
+
+        .feedback-card:nth-child(even) { transform: rotate(1.5deg); background: #f0faff; }
+        .feedback-card:nth-child(3n) { transform: rotate(-0.5deg); background: #fdf0ff; }
+
+        .feedback-card b { display: block; margin-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 5px; }
+
+        .tip-container {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .tip-btn {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            margin: 0;
+        }
+
+        .tip-btn:hover { background: var(--police-gold); color: white; }
+
+        /* Monitor Styling voor docent */
+        .class-section { margin-top: 20px; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; }
+        .class-header { background: #eee; padding: 10px; font-weight: bold; border-bottom: 1px solid #ddd; text-transform: uppercase; }
+        .answer-row { padding: 10px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 120px 1fr 150px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -121,7 +147,7 @@
         <div class="sentence-box" id="wrong-sentence">Laden...</div>
         <textarea id="correction-input" placeholder="Verbeter de bovenstaande zin..." rows="3"></textarea>
         <button id="btn-submit">Verzend Correctie</button>
-        <h4>Feedback van collega's</h4>
+        <h4>Tips van collega's</h4>
         <div id="peer-feedback-list"></div>
     </div>
 
@@ -138,8 +164,7 @@
         </div>
 
         <h4>Live Resultaten:</h4>
-        <div id="class-monitor">
-            </div>
+        <div id="class-monitor"></div>
 
         <button id="btn-reset" class="btn-reset">RESET SESSIE & WISSEN</button>
     </div>
@@ -189,24 +214,7 @@
         initSync(true);
     };
 
-    // --- DOCENT LOGICA ---
-    document.getElementById('btn-next').onclick = () => changeStep(1);
-    document.getElementById('btn-prev').onclick = () => changeStep(-1);
-    document.getElementById('btn-reset').onclick = async () => {
-        if(confirm("Sessie resetten? Alle data wordt gewist.")) {
-            await set(ref(db, 'session/currentStep'), 0);
-            await remove(ref(db, 'corrections'));
-        }
-    };
-
-    function changeStep(delta) {
-        runTransaction(ref(db, 'session/currentStep'), (c) => {
-            let next = (c || 0) + delta;
-            return Math.max(0, Math.min(next, zinnen.length - 1));
-        });
-    }
-
-    // --- SYNC & MONITOR ---
+    // --- SYNC LOGICA ---
     function initSync(isMonitor) {
         onValue(ref(db, 'session/currentStep'), (snapshot) => {
             const step = snapshot.val() || 0;
@@ -220,6 +228,23 @@
             } else {
                 loadStudentFeedback(step);
             }
+        });
+    }
+
+    // --- DOCENT FUNCTIES ---
+    document.getElementById('btn-next').onclick = () => changeStep(1);
+    document.getElementById('btn-prev').onclick = () => changeStep(-1);
+    document.getElementById('btn-reset').onclick = async () => {
+        if(confirm("Sessie resetten? Alle data wordt gewist.")) {
+            await set(ref(db, 'session/currentStep'), 0);
+            await remove(ref(db, 'corrections'));
+        }
+    };
+
+    function changeStep(delta) {
+        runTransaction(ref(db, 'session/currentStep'), (c) => {
+            let next = (c || 0) + delta;
+            return Math.max(0, Math.min(next, zinnen.length - 1));
         });
     }
 
@@ -237,11 +262,11 @@
                         html += `<div class="answer-row">
                             <strong>${user}</strong>
                             <span>${entry.text}</span>
-                            <span class="vote-count">👍 ${entry.votes || 0}</span>
+                            <span style="font-size: 0.7rem; color: #666;">💡H:${entry.tip_helder||0} | ⚖️O:${entry.tip_obj||0} | ✍️T:${entry.tip_taal||0}</span>
                         </div>`;
                     }
                 } else {
-                    html += `<div style="padding:10px; color:#999 italic;">Nog geen inzendingen...</div>`;
+                    html += `<div style="padding:10px; color:#999; font-style:italic;">Geen inzendingen...</div>`;
                 }
                 html += `</div>`;
                 monitorDiv.innerHTML += html;
@@ -249,35 +274,50 @@
         });
     }
 
-    // --- STUDENT FEEDBACK ---
+    // --- STUDENT FEEDBACK (STABIEL) ---
     document.getElementById('btn-submit').onclick = () => {
         const text = document.getElementById('correction-input').value.trim();
         if(!text) return;
         onValue(ref(db, 'session/currentStep'), (s) => {
-            set(ref(db, `corrections/${s.val() || 0}/${currentClass}/${currentUser}`), { text, votes: 0 });
-            alert("Verzonden!");
+            set(ref(db, `corrections/${s.val() || 0}/${currentClass}/${currentUser}`), { 
+                text, tip_helder: 0, tip_obj: 0, tip_taal: 0 
+            });
+            alert("Correctie verzonden!");
+            document.getElementById('correction-input').value = "";
         }, { onlyOnce: true });
     };
 
     function loadStudentFeedback(step) {
+        const list = document.getElementById('peer-feedback-list');
         onValue(ref(db, `corrections/${step}/${currentClass}`), (snap) => {
-            const list = document.getElementById('peer-feedback-list');
-            list.innerHTML = "";
             const data = snap.val() || {};
             for(let user in data) {
                 if(user === currentUser) continue;
-                const div = document.createElement('div');
-                div.style = "border-bottom:1px solid #ddd; padding:10px; display:flex; justify-content:space-between;";
-                div.innerHTML = `<span><b>${user}:</b> ${data[user].text}</span>
-                    <span>${data[user].votes || 0} 
-                    <button style="width:auto; padding:2px 5px;" onclick="window.vote('${step}','${user}',1)">👍</button></span>`;
-                list.appendChild(div);
+                const entry = data[user];
+                
+                let card = document.getElementById(`card-${user}`);
+                if (!card) {
+                    card = document.createElement('div');
+                    card.id = `card-${user}`;
+                    card.className = 'feedback-card';
+                    list.appendChild(card);
+                }
+
+                card.innerHTML = `
+                    <b>${user}</b>
+                    <p style="font-size:0.9rem; margin:0;">"${entry.text}"</p>
+                    <div class="tip-container">
+                        <button class="tip-btn" onclick="window.giveTip('${step}','${user}','tip_helder')">💡 Tip: Maak helderder (${entry.tip_helder || 0})</button>
+                        <button class="tip-btn" onclick="window.giveTip('${step}','${user}','tip_obj')">⚖️ Tip: Meer objectief (${entry.tip_obj || 0})</button>
+                        <button class="tip-btn" onclick="window.giveTip('${step}','${user}','tip_taal')">✍️ Tip: Spelling/Taal (${entry.tip_taal || 0})</button>
+                    </div>
+                `;
             }
         });
     }
 
-    window.vote = (step, target, val) => {
-        runTransaction(ref(db, `corrections/${step}/${currentClass}/${target}/votes`), (c) => (c || 0) + val);
+    window.giveTip = (step, target, type) => {
+        runTransaction(ref(db, `corrections/${step}/${currentClass}/${target}/${type}`), (c) => (c || 0) + 1);
     };
 </script>
 </body>

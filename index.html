@@ -187,13 +187,29 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const zinnen = [
-        "De verdachte reed hard.", "Het slachtoffer had veel pijn.", "De verdachte droeg donkere kleding.",
-        "Het was een grote groep mensen.", "De verdachte was erg boos.", "De man met de hond die blafte.",
-        "De gevonden sleutels van de auto.", "De fiets van de man die gestolen was.",
-        "De politieagent zag de dief met het mes.", "Hij zag de man met de verrekijker."
+    // --- GEUPDATE ZINNEN: VTT, POLITIE THEMA, GEEN IK-VORM ---
+  const zinnen = [
+        "De verdachte is door de collega's met gepast geweld onder controle gebracht.",
+        "Het voertuig is door de surveillance-eenheid aan de kant gezet voor een controle.",
+        "De identiteit van de betrokkenen is ter plaatse vastgesteld.",
+        "Er is door de verbalisanten een onderzoek ingesteld in de kofferbak van de auto.",
+        "De verdovende middelen zijn door de hondengeleider in de woning aangetroffen.",
+        "De getuige is door de politie gehoord over de toedracht van het incident.",
+        "Het gebied is door de agenten afgezet met lint om de sporen te beschermen.",
+        "De gestolen goederen zijn door de opsporingsambtenaar in beslag genomen.",
+        "Er is door de eenheid een achtervolging ingezet op de vluchtende motorrijder.",
+        "De gevaarlijke situatie is door het snelle optreden van de politie beëindigd.",
+        "De verdachte is na een korte achtervolging te voet aangehouden op verdenking van diefstal.",
+        "Er is bij de aanhouding fysiek geweld toegepast om de verzetplegende verdachte te boeien.",
+        "Het voertuig is door een erkend bergingsbedrijf weggesleept wegens het blokkeren van een nooduitgang.",
+        "De verdachte is direct na de aanhouding overgebracht naar het cellencomplex voor verhoor.",
+        "Er is gebruikgemaakt van de uitschuifbare wapenstok om de verdachte tot medewerking te dwingen.",
+        "De auto is door de politie in beslag genomen en weggesleept voor technisch sporenonderzoek.",
+        "De aanhouding is op een veilige wijze verricht door de inzet van meerdere eenheden.",
+        "Er zijn pepperspray en fysieke dwangmiddelen ingezet om de dreigende situatie te deëscaleren.",
+        "Het achtergelaten voertuig is na overleg met de officier van justitie weggesleept van de rijksweg.",
+        "De verdachte is conform de procedure gewezen op de rechten en de reden van de aanhouding."
     ];
-
     let currentUser = "";
     let currentClass = "";
     const klassen = ["delta", "echo", "foxtrot", "golf", "hotel", "juliett", "lima", "mike"];
